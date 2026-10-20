@@ -1409,6 +1409,30 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     return { ...m, shots: groups, count: m.photos.length };
   });
 
+  // 每個月的照片先在背景慢慢下載：網頁載好後就開始（她還在弄信封的時候），一次兩張、優先度低，不跟其他東西搶；
+  // 打開某個月的時候，那個月和下一個月排到最前面，點開時照片就已經在了
+  const preQ = months12.flatMap((m) => m.shots.flatMap((g) => g.items.map((it) => it.big)));
+  const preStarted = new Set();
+  let preRunning = 0;
+  function prePump() {
+    while (preRunning < 2 && preQ.length) {
+      const src = preQ.shift();
+      if (preStarted.has(src)) continue;
+      preStarted.add(src); preRunning++;
+      const im = new Image();
+      im.fetchPriority = "low"; im.decoding = "async";
+      im.onload = im.onerror = () => { preRunning--; prePump(); };
+      im.src = src;
+    }
+  }
+  function preloadMonths(i) {
+    const urls = [i, i + 1].filter((k) => k < months12.length).flatMap((k) => months12[k].shots.flatMap((g) => g.items.map((it) => it.big)));
+    urls.reverse().forEach((u) => { const k = preQ.indexOf(u); if (k >= 0) preQ.splice(k, 1); if (!preStarted.has(u)) preQ.unshift(u); });
+    prePump();
+  }
+  if (document.readyState === "complete") setTimeout(prePump, 1500);
+  else addEventListener("load", () => setTimeout(prePump, 1500), { once: true });
+
   function el(tag, attrs = {}, parent) {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
@@ -1591,6 +1615,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     $("lbCap").classList.remove("seed-words", "in");
     resetSparkler(true);
     curMonth = petal.mo; lastPetal = petal;
+    preloadMonths(months12.indexOf(petal.mo));
     $("lbMonth").textContent = monthName(petal.mo.month);
     show(0);
     lb.hidden = false;
@@ -2659,6 +2684,11 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
   let nightT = null;
   function settle() {
     clearTimeout(checkT); clearTimeout(nightT);
+    {   // 還在手勢裡：轉到的那一天有歌，就先解鎖那一首
+      const k = String(val(rings.M)).padStart(2, "0") + "-" + String(val(rings.D)).padStart(2, "0");
+      const sec = (CARD.dialSecrets || []).find((x) => x.date === k);
+      if (sec && sec.song) unlockSong(sec.song);
+    }
     checkT = setTimeout(() => {
       const m = val(rings.M), d = val(rings.D);
       if (m === TM && d === TD) return unlock();
@@ -2727,14 +2757,15 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
   /* ── 9/19 這種有歌的彩蛋 ── */
   const nightPoem = $("nightPoem"), songs = {};
   const songFor = (src) => songs[src] || (songs[src] = Object.assign(new Audio(src), { preload: "auto", loop: true }));   // 彩蛋的歌也一直循環
-  // 跟主要的音樂一樣，第一次碰到信封時先解鎖，之後才能直接出聲
-  stage.addEventListener("pointerdown", () => {
-    (CARD.dialSecrets || []).filter((x) => x.song && !songs[x.song]).forEach((x) => {
-      const a = songFor(x.song);
-      a.muted = true;
-      a.play().then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
-    });
-  }, { capture: true });
+  // iPhone 只允許在手指放開的那一刻開始出聲，所以轉盤一停在某個彩蛋的日子，就先把「那一天」的歌解鎖（只下載那一首）
+  // _live：彩蛋已經開始放這首歌了，解鎖完不要再把它停掉
+  function unlockSong(src) {
+    const a = songFor(src);
+    if (a._unlocked) return;
+    a._unlocked = true; a.muted = true;
+    a.play().then(() => { if (!a._live) { a.pause(); a.currentTime = 0; } a.muted = false; }).catch(() => { a.muted = false; });
+  }
+  const playSong = (a) => { a._live = true; a.muted = false; return a.play(); };
   // text.js 的 volume 是「聽起來」的大小：耳朵對音量的感覺不是直線的，0.7 要實際降到大約一半才聽得出變小
   const songVol = (sec) => .85 * Math.pow(Math.max(0, Math.min(1, sec.volume ?? 1)), 2);
   function fadeVol(a, vol, ms, done) {
@@ -3146,7 +3177,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
       const a = roomSong.a;
       if (window.__card.duck) window.__card.duck(true);
       a.currentTime = roomSong.start; a.volume = 0;
-      a.play().then(() => fadeVol(a, roomSong.vol, 2500)).catch(() => {});
+      playSong(a).then(() => fadeVol(a, roomSong.vol, 2500)).catch(() => {});
     }
     rdLever.style.setProperty("--lever", "42deg");
     const door = $("roomDoor");
@@ -3318,7 +3349,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     if (main && !main.paused) fadeVol(main, 0, 700, () => { if (guitar) main.pause(); });
     if (window.__card.duck) window.__card.duck(true);
     g.currentTime = 0; g.volume = 0;
-    g.play().then(() => fadeVol(g, songVol({ volume }), 900)).catch(() => {});
+    playSong(g).then(() => fadeVol(g, songVol({ volume }), 900)).catch(() => {});
   }
   function toggleGuitar() {
     const sec = roomSec();
@@ -3338,9 +3369,10 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     if (!guitar) return;
     const { g, notes } = guitar; guitar = null;
     clearInterval(notes);
+    g._live = false;
     fadeVol(g, 0, resume ? 700 : 300, () => { if (!guitar || guitar.g !== g) g.pause(); });
     const main = roomSong && roomSong.a;
-    if (resume && main && roomOpen) main.play().then(() => fadeVol(main, roomSong.vol, 1200)).catch(() => {});
+    if (resume && main && roomOpen) playSong(main).then(() => fadeVol(main, roomSong.vol, 1200)).catch(() => {});
   }
   // 鏡子：光掃過 → 兩個人影浮出來 → 她慢慢消失、化成光點往上飄 → 只剩他，最後也淡掉
   let mirrorT = [];
@@ -3536,7 +3568,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     stage.classList.add("in-room", "xmas-mode");
     if (a) {   // 背景的向日葵先停，換成這首歌
       if (window.__card.duck) window.__card.duck(true);
-      a.currentTime = 0; a.volume = 0; a.play().then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
+      a.currentTime = 0; a.volume = 0; playSong(a).then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
     }
     xmasEl.hidden = false;
     requestAnimationFrame(() => xmasEl.classList.add("on"));
@@ -4084,7 +4116,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     stage.classList.add("in-room", "matsuri-mode");
     if (a) {
       if (window.__card.duck) window.__card.duck(true);
-      a.currentTime = sec.songStart || 0; a.volume = 0; a.play().then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
+      a.currentTime = sec.songStart || 0; a.volume = 0; playSong(a).then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
     }
     mt.her.classList.remove("has-ame", "has-kingyo", "walk", "hop");
     placeHer(MT_HOME, 0);
@@ -4147,7 +4179,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     requestAnimationFrame(() => nightPoem.classList.add("on"));
     if (a) {
       a.currentTime = start; a.volume = 0;
-      a.play().then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
+      playSong(a).then(() => fadeVol(a, songVol(sec), 2500)).catch(() => {});
     }
   }
   function endNight(fast) {
@@ -4161,7 +4193,7 @@ if (!CARD.coverHint) document.querySelector(".front .hint").hidden = true;   // 
     if (n.matsuri) { stage.classList.remove("matsuri-mode"); closeMtZoom(); stopFireworks(); if (window.__card.duck) window.__card.duck(false); mtEl.classList.remove("on"); setTimeout(() => { if (!night || !night.matsuri) mtEl.hidden = true; }, fast ? 0 : 1600); mt = null; }
     if (n.room) { stopGuitar(false); resetMirror(); resetScreens(); roomEl.classList.remove("on", "done", "open", "nudge"); setTimeout(() => { if (!night || !night.room) roomEl.hidden = true; }, fast ? 0 : 1600); }
     setTimeout(() => { if (!night) { nightPoem.hidden = true; nightPoem.replaceChildren(); } }, fast ? 0 : 1400);
-    if (n.a) fadeVol(n.a, 0, fast ? 300 : 1600, () => n.a.pause());
+    if (n.a) { n.a._live = false; fadeVol(n.a, 0, fast ? 300 : 1600, () => { if (!n.a._live) n.a.pause(); }); }
   }
 
   /* ── 看有聲音的影片時，背景音樂先停，看完再接著播 ── */

@@ -79,7 +79,7 @@ Love you
 
   date: "2026-10-21",          // 生日那天：封面日曆頁和信封的蠟封密碼都跟著它
   candles: "27",               // 蛋糕上的蠟燭：寫成字串就是數字蠟燭，寫數字就是幾根細蠟燭
-  music: "media/向日葵.mp3",    // 蠟封打開時開始播，會一直重複
+  music: "media/web/audio/向日葵.mp3",  // 網頁用的歌都放在 media/web/audio/（原檔留在各自的資料夾，換歌時要再轉一份過來）    // 蠟封打開時開始播，會一直重複
 
   // 一個月一片花瓣，從正上方開始順時針排。
   // 檔名規則：YYYY.MM-A 是單張；YYYY.MM-A-1、YYYY.MM-A-2（-3…）是同一組，會並排在同一頁。
@@ -104,7 +104,7 @@ Love you
   dialSecrets: [
     // 有 poem 的話：信封暗下去，播這首歌，歌詞一句一句直書浮現
     { date: "09-19",
-      song: "media/9:19/第一夜.mp3",
+      song: "media/web/audio/第一夜.mp3",
       songStart: 2,   // 歌從第幾秒開始播
       volume: 0.6,    // 音量（聽起來的大小）：1 是一般大小，0.7 是小聲一點，0.5 明顯小聲
       times: [],      // 每一句在歌的第幾秒出現（例如 [12, 16.5, 21, ...]）；留空就照固定節奏
@@ -115,7 +115,7 @@ Love you
              "就是這樣內容的一場夢", "夢裡你笑臉迎著我", "對我說一直在等我"] },
     // 10/14：雙人舞。蠟封的兩個圈（月和日）朝相反方向一來一往地擺動，歌詞每句從頭尾兩端往中間相遇
     { date: "10-14",
-      song: "media/10:14/Pas de Deux.mp3",
+      song: "media/web/audio/Pas de Deux.mp3",
       songStart: 0,
       volume: 0.6,
       times: [],
@@ -126,22 +126,22 @@ Love you
     // 9/21：花人局。信封淡出，變成一間夕陽斜照的房間，用燭光一件一件照亮你留下的東西
     { date: "09-21",
       scene: "room",
-      song: "media/9:21/花人局.mp3",   // 打開房間的門時才開始播
+      song: "media/web/audio/花人局.mp3",   // 打開房間的門時才開始播
       songStart: 0,
       volume: 0.4,      // 音量（聽起來的大小）：1 是一般大小，0.7 是小聲一點，0.5 明顯小聲
       computer: "media/web/room/computer.jpg",   // 點電腦：螢幕亮起來的桌布
       tv: "media/web/room/tv.mp4",               // 點電視：電視播的影片
       book: "media/web/room/book.jpg",           // 點書架上的書：打開這張書封
       poster: "media/web/room/zense.jpg",        // 點門右上角牆上的畫：打開這張圖
-      posterSong: "media/9:21/前世.mp3",         // 看那張圖的時候播這首歌，關掉圖就換回花人局
+      posterSong: "media/web/audio/前世.mp3",         // 看那張圖的時候播這首歌，關掉圖就換回花人局
       posterVolume: 1,
-      guitarSong: "media/9:21/Gymnopédies.mp3",  // 點吉他：換成這首歌，再點一次換回花人局
+      guitarSong: "media/web/audio/Gymnopédies.mp3",  // 點吉他：換成這首歌，再點一次換回花人局
       guitarVolume: 1 },
     // 8/5：はかた夏まつり。燈籠一顆一顆亮起來，穿浴衣的她在祭典裡逛攤子：
     // 咬りんごあめ、撈金魚各藏一張照片；兩個都找到以後敲大鼓，放完煙火夜空會寫出 finale 那句話
     { date: "08-05",
       scene: "matsuri",
-      song: "media/8:5/噓月.mp3",
+      song: "media/web/audio/噓月.mp3",
       songStart: 0,   // 歌從第幾秒開始播
       volume: 0.6,  // 音量（聽起來的大小）：1 是一般大小，0.7 是小聲一點，0.5 明顯小聲
       ame: "media/web/matsuri/ame.jpg",          // 咬完りんごあめ看到的照片
@@ -150,7 +150,7 @@ Love you
     // 12/25：聖誕樹。每一年是一個掛在樹上的相框，點開可以看那一年的照片（檔案在 media/web/xmas/）
     { date: "12-25",
       scene: "xmas",
-      song: "media/web/xmas/Merry Christmas.mp3",
+      song: "media/web/audio/Merry Christmas.mp3",
       volume: 1,
       years: [
         { year: "2021", photos: ["2021-1"] },
